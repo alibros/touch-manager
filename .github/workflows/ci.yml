@@ -37,6 +37,7 @@ jobs:
           workspaces: src-tauri
 
       - run: npm ci
+      - run: bash -n .github/scripts/build-dfu-util-macos.sh
       - run: npm test
       - run: npm run build
       - run: cargo fmt --all -- --check

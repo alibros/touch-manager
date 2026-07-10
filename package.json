@@ -1,7 +1,7 @@
 {
   "name": "touch-manager",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "A safe firmware library, installer, and diagnostic console for Synthux Touch 2.",
   "license": "MIT",
   "author": "Ali Bross",

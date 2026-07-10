@@ -4,6 +4,7 @@ import type {
   CatalogItem,
   DownloadResult,
   FirmwareAnalysis,
+  FlashingEngineStatus,
   FlashResult,
   HistoryEntry,
   TargetProfile,
@@ -38,6 +39,17 @@ export async function analyzeFirmware(path: string): Promise<FirmwareAnalysis> {
 export async function getHistory(): Promise<HistoryEntry[]> {
   if (!isDesktop) return [];
   return invoke<HistoryEntry[]>("list_history");
+}
+
+export async function getFlashingEngine(): Promise<FlashingEngineStatus> {
+  if (!isDesktop) {
+    return {
+      ready: false,
+      source: "missing",
+      message: "Available in the packaged desktop application",
+    };
+  }
+  return invoke<FlashingEngineStatus>("get_flashing_engine");
 }
 
 export async function startConsole(portName: string): Promise<string> {

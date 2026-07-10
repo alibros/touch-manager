@@ -12,7 +12,7 @@ BOOT/RESET recovery path.
 > connected during an installation and retain a known-good firmware binary. Automated
 > tests never write to a connected device.
 
-## What works in 0.2
+## What works in 0.3
 
 - Bundled metadata for 23 official and community Touch 2 instruments.
 - On-demand downloading and verified local caching for redistributable official firmware.
@@ -21,7 +21,7 @@ BOOT/RESET recovery path.
 - SHA-256, size, Thumb-vector, stack-pointer, and execution-layout validation.
 - Fixed profiles for STM32 internal flash, Daisy `BOOT_SRAM`, and Daisy `BOOT_QSPI`.
 - Detection of runtime USB, STM32 ROM DFU, Daisy Bootloader DFU, and serial ports.
-- Profile-specific update instructions and an explicitly confirmed `dfu-util` installer.
+- Profile-specific update instructions and a built-in, version-checked flashing engine.
 - Runtime-return detection, recovery-aware results, and SQLite install history.
 - USB serial diagnostics and support-transcript export.
 - Responsive macOS-first interface built with Tauri, React, TypeScript, and Rust.
@@ -34,10 +34,11 @@ roadmap are in [BUILD_PLAN.md](BUILD_PLAN.md).
 Download the latest macOS installer from
 [GitHub Releases](https://github.com/alibros/touch-manager/releases).
 
-The current preview is built for Apple Silicon Macs. It is ad-hoc signed rather than
-Apple-notarized, so first launch may require Control-clicking the app, choosing **Open**,
-or approving it in **System Settings → Privacy & Security**. Install `dfu-util` with
-`brew install dfu-util` before writing firmware.
+The current preview is built for Apple Silicon Macs and is fully self-contained: its
+flashing engine is included in the application, so Homebrew and Terminal setup are not
+required. It is ad-hoc signed rather than Apple-notarized, so first launch may require
+Control-clicking the app, choosing **Open**, or approving it in **System Settings →
+Privacy & Security**.
 
 Release builds can download the eight official firmware binaries whose upstream MIT
 licenses permit redistribution. Every download is checked against its catalog SHA-256 and
@@ -65,7 +66,7 @@ Prerequisites:
 - macOS, Windows, or Linux with the [Tauri 2 prerequisites](https://v2.tauri.app/start/prerequisites/)
 - Node.js 20.19 or newer
 - Current stable Rust
-- `dfu-util` 0.11 or newer for real hardware installation
+- `dfu-util` 0.11 or newer for local development only; release builds include it
 
 On macOS:
 
@@ -125,6 +126,12 @@ Current macOS downloads are clearly labelled development previews. A polished st
 release still requires Apple Developer ID signing and notarization. Windows releases need
 explicit WinUSB guidance, and Linux releases need narrow udev rules; those distribution
 tasks remain on the roadmap.
+
+The tagged macOS release workflow builds `dfu-util` 0.11 and `libusb` 1.0.30 from their
+checksum-pinned sources, statically links them, verifies that no non-system dynamic
+libraries remain, and embeds the executable in the application bundle. Both corresponding
+source archives and the required license notices ship with every release. See
+[third-party notices](docs/THIRD_PARTY_NOTICES.md).
 
 ## Buttonless updates
 

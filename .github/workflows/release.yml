@@ -24,6 +24,9 @@ jobs:
         with:
           targets: aarch64-apple-darwin
 
+      - name: Build self-contained flashing engine
+        run: .github/scripts/build-dfu-util-macos.sh
+
       - run: npm ci
 
       - name: Build and publish DMG
@@ -34,10 +37,17 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: Touch Manager ${{ github.ref_name }}
           releaseBody: |
-            Apple Silicon development preview.
+            Self-contained Apple Silicon development preview.
 
-            This build is not Apple-notarized. On first launch, Control-click Touch Manager and choose Open. Install dfu-util separately with Homebrew before flashing hardware.
+            The flashing engine is included; Homebrew and Terminal setup are not required. This build is not Apple-notarized. On first launch, Control-click Touch Manager and choose Open.
+
+            Touch Manager includes dfu-util 0.11 under GPL-2.0-or-later and statically linked libusb 1.0.30 under LGPL-2.1-or-later. Their exact corresponding source archives are attached to this release.
           prerelease: true
-          args: --target aarch64-apple-darwin --bundles dmg
+          args: --target aarch64-apple-darwin --bundles dmg --config src-tauri/tauri.release.conf.json
           releaseAssetNamePattern: Touch-Manager_[version]_[arch].[ext]
           uploadUpdaterSignatures: false
+
+      - name: Upload bundled component source
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${GITHUB_REF_NAME}" release-assets/dfu-util-0.11.tar.gz release-assets/libusb-1.0.30.tar.bz2 --clobber
