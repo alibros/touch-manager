@@ -28,6 +28,20 @@ BOOT/RESET recovery path.
 The full architecture, threat model, target profiles, TouchLink proposal, and phased
 roadmap are in [BUILD_PLAN.md](BUILD_PLAN.md).
 
+## Download
+
+Download the latest macOS installer from
+[GitHub Releases](https://github.com/alibros/touch-manager/releases).
+
+The current preview is built for Apple Silicon Macs. It is ad-hoc signed rather than
+Apple-notarized, so first launch may require Control-clicking the app, choosing **Open**,
+or approving it in **System Settings → Privacy & Security**. Install `dfu-util` with
+`brew install dfu-util` before writing firmware.
+
+Release builds contain the firmware catalog but do not redistribute upstream firmware
+binaries. Users can import a `.bin` directly or provide the Synthux firmware workspace
+described below.
+
 ## Safety model
 
 The frontend cannot supply a shell command, arbitrary address, or DFU alternate setting.
@@ -71,9 +85,9 @@ Resolution order:
 
 1. `SYNTHUX_WORKSPACE`
 2. An ancestor of the current working directory
-3. `~/dev/synthux` for Finder-launched local macOS builds
 
-For a custom checkout location:
+For a custom checkout location, set the workspace explicitly when starting the development
+build:
 
 ```sh
 export SYNTHUX_WORKSPACE=/absolute/path/to/synthux
@@ -101,9 +115,10 @@ without requiring or redistributing those binaries.
 npm run tauri -- build
 ```
 
-Local macOS bundles are development artifacts. Public downloads must be signed with an
-Apple Developer ID and notarized. Windows releases need explicit WinUSB guidance, and
-Linux releases need narrow udev rules; those distribution tasks remain on the roadmap.
+Current macOS downloads are clearly labelled development previews. A polished stable
+release still requires Apple Developer ID signing and notarization. Windows releases need
+explicit WinUSB guidance, and Linux releases need narrow udev rules; those distribution
+tasks remain on the roadmap.
 
 ## Buttonless updates
 
