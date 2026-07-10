@@ -91,21 +91,11 @@ fn discover_workspace_root() -> Option<PathBuf> {
         }
     }
 
-    let from_current_directory = env::current_dir().ok().and_then(|cwd| {
+    env::current_dir().ok().and_then(|cwd| {
         cwd.ancestors()
             .find(|candidate| candidate.join("Firmware/SHA256SUMS.txt").is_file())
             .map(PathBuf::from)
-    });
-    if from_current_directory.is_some() {
-        return from_current_directory;
-    }
-
-    // Finder-launched macOS applications do not inherit the terminal's working
-    // directory. Keep the source workspace discoverable for local installations.
-    env::var_os("HOME")
-        .map(PathBuf::from)
-        .map(|home| home.join("dev/synthux"))
-        .filter(|candidate| candidate.join("Firmware/SHA256SUMS.txt").is_file())
+    })
 }
 
 #[allow(dead_code)]

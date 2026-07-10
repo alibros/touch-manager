@@ -85,9 +85,9 @@ Resolution order:
 
 1. `SYNTHUX_WORKSPACE`
 2. An ancestor of the current working directory
-3. `~/dev/synthux` for Finder-launched local macOS builds
 
-For a custom checkout location:
+For a custom checkout location, set the workspace explicitly when starting the development
+build:
 
 ```sh
 export SYNTHUX_WORKSPACE=/absolute/path/to/synthux
