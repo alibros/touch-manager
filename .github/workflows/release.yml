@@ -1,0 +1,43 @@
+name: macOS release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  apple-silicon-dmg:
+    runs-on: macos-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
+
+      - run: npm ci
+
+      - name: Build and publish DMG
+        uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: Touch Manager ${{ github.ref_name }}
+          releaseBody: |
+            Apple Silicon development preview.
+
+            This build is not Apple-notarized. On first launch, Control-click Touch Manager and choose Open. Install dfu-util separately with Homebrew before flashing hardware.
+          prerelease: true
+          args: --target aarch64-apple-darwin --bundles dmg
+          releaseAssetNamePattern: Touch-Manager_[version]_[arch].[ext]
+          uploadUpdaterSignatures: false
