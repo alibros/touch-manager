@@ -1,0 +1,39 @@
+name: Bug report
+description: Report reproducible Touch Manager behavior
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Do not include secrets or security vulnerabilities here. Use a private Security Advisory for those.
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Include the expected and actual behavior.
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options: [macOS Apple Silicon, macOS Intel, Windows, Linux]
+    validations:
+      required: true
+  - type: textarea
+    id: device
+    attributes:
+      label: Device and firmware
+      description: Touch 2 revision, current firmware, selected firmware, and detected update mode.
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Paste a redacted transcript or diagnostic output. Do not upload private files.
+      render: text
+  - type: checkboxes
+    id: recovery
+    attributes:
+      label: Recovery status
+      options:
+        - label: I can still enter STM32 BOOT/RESET recovery mode.

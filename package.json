@@ -1,0 +1,36 @@
+{
+  "name": "touch-manager",
+  "private": true,
+  "version": "0.1.0",
+  "description": "A safe firmware library, installer, and diagnostic console for Synthux Touch 2.",
+  "license": "MIT",
+  "author": "Ali Bross",
+  "keywords": ["synthux", "touch-2", "firmware", "dfu", "tauri"],
+  "engines": {
+    "node": ">=20.19"
+  },
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "check": "tsc --noEmit",
+    "test": "npm run check && cargo test --manifest-path src-tauri/Cargo.toml --locked",
+    "preview": "vite preview",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.11.1",
+    "@tauri-apps/plugin-dialog": "^2.7.1",
+    "lucide-react": "^0.468.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.11.4",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^5.0.4",
+    "typescript": "^5.9.3",
+    "vite": "^8.1.4"
+  }
+}

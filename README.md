@@ -1,0 +1,124 @@
+# Touch Manager
+
+Touch Manager is a desktop firmware library, safe installer, and diagnostic console for
+the [Synthux Touch 2](https://www.synthux.academy/). It turns the command-line DFU
+workflow into a clear, profile-aware interface without removing the board's permanent
+BOOT/RESET recovery path.
+
+![Touch Manager firmware library](docs/touch-manager-library.jpg)
+
+> [!IMPORTANT]
+> Touch Manager is pre-release software that writes firmware to hardware. Keep USB power
+> connected during an installation and retain a known-good firmware binary. Automated
+> tests never write to a connected device.
+
+## What works in 0.1
+
+- Bundled metadata for 23 official and community Touch 2 instruments.
+- Searchable firmware library with trust, provenance, target, and checksum information.
+- Raw `.bin` import and local Cortex-M vector-table analysis.
+- SHA-256, size, Thumb-vector, stack-pointer, and execution-layout validation.
+- Fixed profiles for STM32 internal flash, Daisy `BOOT_SRAM`, and Daisy `BOOT_QSPI`.
+- Detection of runtime USB, STM32 ROM DFU, Daisy Bootloader DFU, and serial ports.
+- Profile-specific update instructions and an explicitly confirmed `dfu-util` installer.
+- Runtime-return detection, recovery-aware results, and SQLite install history.
+- USB serial diagnostics and support-transcript export.
+- Responsive macOS-first interface built with Tauri, React, TypeScript, and Rust.
+
+The full architecture, threat model, target profiles, TouchLink proposal, and phased
+roadmap are in [BUILD_PLAN.md](BUILD_PLAN.md).
+
+## Safety model
+
+The frontend cannot supply a shell command, arbitrary address, or DFU alternate setting.
+The Rust backend accepts only compiled-in target profiles and validates the binary again
+immediately before launching `dfu-util`. It refuses ambiguous devices, checksum failures,
+unknown memory layouts, and mismatched STM32/Daisy update modes.
+
+Touch Manager does not write option bytes, change readout protection, or mass-erase a
+device. The STM32 BOOT/RESET gesture remains the recovery mechanism.
+
+## Development setup
+
+Prerequisites:
+
+- macOS, Windows, or Linux with the [Tauri 2 prerequisites](https://v2.tauri.app/start/prerequisites/)
+- Node.js 20.19 or newer
+- Current stable Rust
+- `dfu-util` 0.11 or newer for real hardware installation
+
+On macOS:
+
+```sh
+brew install dfu-util
+npm ci
+npm run tauri dev
+```
+
+Frontend-only preview:
+
+```sh
+npm run dev
+```
+
+## Firmware workspace
+
+Firmware binaries are intentionally not copied into this repository. The bundled catalog
+contains metadata, approved target profiles, paths, and SHA-256 values. At runtime the app
+resolves artifacts from a Synthux workspace containing `Firmware/SHA256SUMS.txt`.
+
+Resolution order:
+
+1. `SYNTHUX_WORKSPACE`
+2. An ancestor of the current working directory
+3. `~/dev/synthux` for Finder-launched local macOS builds
+
+For a custom checkout location:
+
+```sh
+export SYNTHUX_WORKSPACE=/absolute/path/to/synthux
+npm run tauri dev
+```
+
+Imported `.bin` files work without this workspace, but are marked as local and unreviewed.
+Do not redistribute third-party firmware without checking its upstream license.
+
+## Verification
+
+```sh
+npm test
+npm run build
+(cd src-tauri && cargo fmt --all -- --check)
+```
+
+The local golden test verifies all 23 staged artifacts when a firmware workspace is
+available. In a standalone CI checkout, catalog schema and metadata are still tested
+without requiring or redistributing those binaries.
+
+## Native builds
+
+```sh
+npm run tauri -- build
+```
+
+Local macOS bundles are development artifacts. Public downloads must be signed with an
+Apple Developer ID and notarized. Windows releases need explicit WinUSB guidance, and
+Linux releases need narrow udev rules; those distribution tasks remain on the roadmap.
+
+## Buttonless updates
+
+The application contains the host-side TouchLink update request. Existing instruments do
+not yet implement its acknowledgement and reset handler, so they continue to use the
+guided physical update sequence. Buttonless updates require rebuilding maintained
+firmware with the versioned TouchLink protocol described in the build plan.
+
+## Contributing
+
+Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request. Hardware-writing
+changes need an especially clear safety argument and must keep the physical recovery path
+available. Please report security-sensitive problems according to [SECURITY.md](SECURITY.md).
+
+## License
+
+Touch Manager is available under the [MIT License](LICENSE). Firmware listed in the
+catalog remains subject to each upstream project's own license.
