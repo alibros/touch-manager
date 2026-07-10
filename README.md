@@ -31,7 +31,7 @@ roadmap are in [BUILD_PLAN.md](BUILD_PLAN.md).
 ## Download
 
 Download the latest macOS installer from
-[GitHub Releases](https://github.com/alibros/touch-manager/releases/latest).
+[GitHub Releases](https://github.com/alibros/touch-manager/releases).
 
 The current preview is built for Apple Silicon Macs. It is ad-hoc signed rather than
 Apple-notarized, so first launch may require Control-clicking the app, choosing **Open**,
