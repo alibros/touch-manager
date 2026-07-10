@@ -79,10 +79,16 @@ async fn flash_firmware(
     flash::run_flash(app, history, request).await
 }
 
+#[tauri::command]
+async fn get_flashing_engine(app: tauri::AppHandle) -> flash::FlashingEngineStatus {
+    flash::flashing_engine_status(&app).await
+}
+
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_shell::init())
         .setup(|app| {
             let data_dir = app.path().app_data_dir()?;
             fs::create_dir_all(&data_dir)?;
@@ -103,6 +109,7 @@ pub fn run() {
             request_update_mode,
             save_transcript,
             flash_firmware,
+            get_flashing_engine,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Touch Manager");

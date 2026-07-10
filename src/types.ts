@@ -91,3 +91,10 @@ export interface FlashResult {
   transcript: string;
   message: string;
 }
+
+export interface FlashingEngineStatus {
+  ready: boolean;
+  source: "bundled" | "development" | "missing";
+  version?: string;
+  message: string;
+}

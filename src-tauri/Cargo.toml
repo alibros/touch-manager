@@ -1,6 +1,6 @@
 [package]
 name = "touch-manager"
-version = "0.2.0"
+version = "0.3.0"
 description = "Firmware library and diagnostic manager for Synthux Touch 2"
 authors = ["Ali Bross"]
 edition = "2021"
@@ -29,5 +29,6 @@ sha2 = "0.11.0"
 tauri = { version = "2.11.5", features = [] }
 tauri-plugin-dialog = "2.7.1"
 tauri-plugin-opener = "2.5.4"
+tauri-plugin-shell = "2.3.5"
 thiserror = "2.0.18"
 uuid = { version = "1.20.0", features = ["v4", "serde"] }

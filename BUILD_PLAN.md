@@ -26,7 +26,7 @@ The physical BOOT/RESET path remains the permanent recovery mechanism.
 - Detection of runtime CDC, STM32 ROM DFU, and Daisy Bootloader DFU states.
 - Safe support for internal, `BOOT_SRAM`, and `BOOT_QSPI` binaries.
 - Guided DFU entry and semantic flash progress.
-- Guarded `dfu-util` backend with fixed target profiles.
+- Guarded, self-contained `dfu-util` backend with fixed target profiles.
 - Runtime return detection and contextual handling of the known post-transfer
   `get_status` disconnect.
 - USB serial diagnostics, searchable console, and exported support transcript.
@@ -71,8 +71,8 @@ The physical BOOT/RESET path remains the permanent recovery mechanism.
 - `catalog`: loads the bundled catalog, resolves local artifacts, and exposes typed
   firmware metadata.
 - `device`: enumerates USB and serial devices and models runtime/DFU state.
-- `flash`: converts approved profiles into fixed `dfu-util` invocations and interprets
-  progress/results.
+- `flash`: resolves the bundled flashing engine, converts approved profiles into fixed
+  `dfu-util` invocations, and interprets progress/results.
 - `diagnostics`: opens CDC serial ports and emits log events to the interface.
 - `history`: records attempted and completed installs in SQLite.
 
@@ -195,6 +195,7 @@ the flow on a dedicated test Seed, with recovery tested after interruption.
 
 ### Phase 4 — distribution
 
+- Self-contained Apple Silicon DMG with a checksum-pinned flashing sidecar.
 - Signed/notarized macOS DMG.
 - Signed Windows installer and explicit Driver Doctor for WinUSB.
 - Debian package with narrow udev rules and AppImage fallback.

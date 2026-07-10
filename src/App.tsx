@@ -32,6 +32,7 @@ import {
   downloadOfficialFirmware,
   flashFirmware,
   getCatalog,
+  getFlashingEngine,
   getHistory,
   isDesktop,
   requestUpdateMode,
@@ -45,6 +46,7 @@ import type {
   FirmwareAnalysis,
   FlashEvent,
   FlashResult,
+  FlashingEngineStatus,
   HistoryEntry,
   TargetProfile,
   TouchDevice,
@@ -76,6 +78,7 @@ function App() {
   const [installing, setInstalling] = useState<CatalogItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [flashingEngine, setFlashingEngine] = useState<FlashingEngineStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const refreshDevices = useCallback(async () => {
@@ -95,11 +98,12 @@ function App() {
   }, []);
 
   useEffect(() => {
-    Promise.all([getCatalog(), scanDevices(), getHistory()])
-      .then(([items, foundDevices, entries]) => {
+    Promise.all([getCatalog(), scanDevices(), getHistory(), getFlashingEngine()])
+      .then(([items, foundDevices, entries, engine]) => {
         setCatalog(items);
         setDevices(foundDevices);
         setHistory(entries);
+        setFlashingEngine(engine);
         setSelected(items.find((item) => item.featured) ?? items[0] ?? null);
       })
       .catch((reason) => setError(String(reason)))
@@ -247,6 +251,7 @@ function App() {
             query={query}
             filter={filter}
             deviceConnected={Boolean(runtimeDevice || dfuDevice)}
+            flashingEngineReady={flashingEngine?.ready ?? false}
             onQuery={setQuery}
             onFilter={setFilter}
             onSelect={setSelected}
@@ -256,7 +261,12 @@ function App() {
             onImport={importFirmware}
           />
         ) : page === "device" ? (
-          <DevicePage devices={devices} onRefresh={refreshDevices} onLibrary={() => setPage("library")} />
+          <DevicePage
+            devices={devices}
+            flashingEngine={flashingEngine}
+            onRefresh={refreshDevices}
+            onLibrary={() => setPage("library")}
+          />
         ) : page === "console" ? (
           <ConsolePage devices={devices} />
         ) : (
@@ -352,6 +362,7 @@ function LibraryPage({
   query,
   filter,
   deviceConnected,
+  flashingEngineReady,
   onQuery,
   onFilter,
   onSelect,
@@ -365,6 +376,7 @@ function LibraryPage({
   query: string;
   filter: string;
   deviceConnected: boolean;
+  flashingEngineReady: boolean;
   onQuery: (value: string) => void;
   onFilter: (value: string) => void;
   onSelect: (item: CatalogItem) => void;
@@ -426,6 +438,7 @@ function LibraryPage({
           <FirmwareDetail
             item={selected}
             deviceConnected={deviceConnected}
+            flashingEngineReady={flashingEngineReady}
             downloading={downloadingId === selected.id}
             onInstall={() => onInstall(selected)}
             onDownload={() => onDownload(selected)}
@@ -462,12 +475,14 @@ function FirmwareCard({ item, selected, onSelect }: { item: CatalogItem; selecte
 function FirmwareDetail({
   item,
   deviceConnected,
+  flashingEngineReady,
   downloading,
   onInstall,
   onDownload,
 }: {
   item: CatalogItem;
   deviceConnected: boolean;
+  flashingEngineReady: boolean;
   downloading: boolean;
   onInstall: () => void;
   onDownload: () => void;
@@ -495,7 +510,7 @@ function FirmwareDetail({
       </dl>
       <div className="detail-actions">
         {item.availableLocally ? (
-          <button className="install-action" onClick={onInstall} disabled={item.checksumMatches === false || !isDesktop}>
+          <button className="install-action" onClick={onInstall} disabled={item.checksumMatches === false || !flashingEngineReady || !isDesktop}>
             <Download />
             <span><small>{deviceConnected ? "Ready when you are" : "Connect Touch 2"}</small>Install instrument</span>
           </button>
@@ -508,6 +523,9 @@ function FirmwareDetail({
         {!item.availableLocally && !downloadable && item.trust === "official" && (
           <p className="action-note">This official binary is not mirrored because its upstream redistribution license is not confirmed.</p>
         )}
+        {item.availableLocally && !flashingEngineReady && isDesktop && (
+          <p className="action-note">The built-in flashing engine is unavailable. Reinstall the latest official Touch Manager release.</p>
+        )}
         {item.trust !== "official" && (
           <ExternalLink className="community-source" href="https://github.com/Synthux-Academy/awesome-synthux#simple-touch-2">
             Browse the Touch 2 community directory <ArrowUpRight />
@@ -519,7 +537,17 @@ function FirmwareDetail({
   );
 }
 
-function DevicePage({ devices, onRefresh, onLibrary }: { devices: TouchDevice[]; onRefresh: () => void; onLibrary: () => void }) {
+function DevicePage({
+  devices,
+  flashingEngine,
+  onRefresh,
+  onLibrary,
+}: {
+  devices: TouchDevice[];
+  flashingEngine: FlashingEngineStatus | null;
+  onRefresh: () => void;
+  onLibrary: () => void;
+}) {
   const device = devices[0];
   return (
     <div className="single-page">
@@ -550,6 +578,15 @@ function DevicePage({ devices, onRefresh, onLibrary }: { devices: TouchDevice[];
             <h3><ShieldCheck /> Recovery</h3>
             <p>The factory STM32 recovery cannot be erased by an ordinary firmware install.</p>
             <ol><li>Hold BOOT</li><li>Tap RESET</li><li>Release BOOT</li></ol>
+          </section>
+          <section className="info-card">
+            <h3><Zap /> Flashing engine</h3>
+            <dl>
+              <div><dt>Status</dt><dd>{flashingEngine?.ready ? "Ready" : "Unavailable"}</dd></div>
+              <div><dt>Installation</dt><dd>{flashingEngine?.source === "bundled" ? "Built in" : "Development"}</dd></div>
+              <div><dt>Version</dt><dd>{flashingEngine?.version ?? "—"}</dd></div>
+            </dl>
+            <p>{flashingEngine?.message ?? "Checking the flashing engine…"}</p>
           </section>
           <button className="wide-cta" onClick={onLibrary}><LibraryBig /> Choose another instrument <ChevronRight /></button>
         </div>

@@ -5,14 +5,26 @@ use crate::{
 };
 use serde::{Deserialize, Serialize};
 use std::{
-    env,
     path::Path,
-    path::PathBuf,
-    process::Command,
     thread,
     time::{Duration, Instant},
 };
 use tauri::{AppHandle, Emitter, State};
+use tauri_plugin_shell::{process::Command, ShellExt};
+
+#[cfg(debug_assertions)]
+use std::{env, path::PathBuf};
+
+const BUNDLED_DFU_UTIL: &str = "dfu-util";
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FlashingEngineStatus {
+    pub ready: bool,
+    pub source: String,
+    pub version: Option<String>,
+    pub message: String,
+}
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -92,17 +104,22 @@ pub async fn run_flash(
     }
 
     emit(&app, "writing", "Erasing and writing firmware");
-    let path = request.path.clone();
     let address = format!("{}:leave", request.target_profile.address());
-    let dfu_util = find_dfu_util();
-    let output = tauri::async_runtime::spawn_blocking(move || {
-        Command::new(dfu_util)
-            .args(["-a", "0", "-d", ",0483:df11", "-s", &address, "-D", &path])
-            .output()
-    })
-    .await
-    .map_err(|error| error.to_string())?
-    .map_err(|error| format!("Could not launch dfu-util: {error}"))?;
+    let command = flashing_command(&app)?;
+    let output = command
+        .args([
+            "-a",
+            "0",
+            "-d",
+            ",0483:df11",
+            "-s",
+            &address,
+            "-D",
+            &request.path,
+        ])
+        .output()
+        .await
+        .map_err(|error| format!("Could not launch the built-in flashing engine: {error}"))?;
 
     let transcript = format!(
         "{}{}",
@@ -168,15 +185,94 @@ pub async fn run_flash(
     })
 }
 
-fn find_dfu_util() -> PathBuf {
+pub async fn flashing_engine_status(app: &AppHandle) -> FlashingEngineStatus {
+    let source = flashing_engine_source();
+    let command = match flashing_command(app) {
+        Ok(command) => command,
+        Err(error) => {
+            return FlashingEngineStatus {
+                ready: false,
+                source: "missing".into(),
+                version: None,
+                message: error,
+            };
+        }
+    };
+
+    match command.arg("--version").output().await {
+        Ok(output) if output.status.success() => {
+            let combined = format!(
+                "{}{}",
+                String::from_utf8_lossy(&output.stdout),
+                String::from_utf8_lossy(&output.stderr)
+            );
+            let version = parse_dfu_util_version(&combined);
+            FlashingEngineStatus {
+                ready: version.is_some(),
+                source: source.into(),
+                version,
+                message: if source == "bundled" {
+                    "Included with Touch Manager".into()
+                } else {
+                    "Development flashing engine".into()
+                },
+            }
+        }
+        Ok(output) => FlashingEngineStatus {
+            ready: false,
+            source: source.into(),
+            version: None,
+            message: format!("Flashing engine exited with status {:?}", output.status.code()),
+        },
+        Err(error) => FlashingEngineStatus {
+            ready: false,
+            source: "missing".into(),
+            version: None,
+            message: format!(
+                "The built-in flashing engine is unavailable. Reinstall the latest official Touch Manager release. {error}"
+            ),
+        },
+    }
+}
+
+fn flashing_command(app: &AppHandle) -> Result<Command, String> {
+    #[cfg(debug_assertions)]
+    if let Some(path) = development_dfu_util() {
+        return Ok(app.shell().command(path));
+    }
+
+    app.shell()
+        .sidecar(BUNDLED_DFU_UTIL)
+        .map_err(|error| format!("Could not locate the built-in flashing engine: {error}"))
+}
+
+fn flashing_engine_source() -> &'static str {
+    #[cfg(debug_assertions)]
+    if development_dfu_util().is_some() {
+        return "development";
+    }
+    "bundled"
+}
+
+fn parse_dfu_util_version(output: &str) -> Option<String> {
+    output
+        .lines()
+        .find(|line| line.trim_start().starts_with("dfu-util "))
+        .map(|line| line.trim().to_string())
+}
+
+#[cfg(debug_assertions)]
+fn development_dfu_util() -> Option<PathBuf> {
     if let Some(path) = env::var_os("TOUCH_MANAGER_DFU_UTIL") {
-        return PathBuf::from(path);
+        let path = PathBuf::from(path);
+        if path.is_file() {
+            return Some(path);
+        }
     }
     ["/opt/homebrew/bin/dfu-util", "/usr/local/bin/dfu-util"]
         .into_iter()
         .map(PathBuf::from)
         .find(|path| path.is_file())
-        .unwrap_or_else(|| PathBuf::from("dfu-util"))
 }
 
 fn wait_for_runtime(timeout: Duration) -> bool {
@@ -202,10 +298,22 @@ fn emit(app: &AppHandle, phase: &str, message: &str) {
 
 #[cfg(test)]
 mod tests {
+    use super::parse_dfu_util_version;
+
     #[test]
     fn recognizes_known_leave_disconnect_as_post_transfer() {
         let transcript = "File downloaded successfully\nError during download get_status";
         assert!(transcript.contains("File downloaded successfully"));
         assert!(transcript.contains("Error during download get_status"));
+    }
+
+    #[test]
+    fn parses_bundled_flashing_engine_version() {
+        let output = "dfu-util 0.11\n\nCopyright 2005-2021";
+        assert_eq!(
+            parse_dfu_util_version(output).as_deref(),
+            Some("dfu-util 0.11")
+        );
+        assert_eq!(parse_dfu_util_version("not dfu-util"), None);
     }
 }
