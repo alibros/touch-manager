@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import rawCatalog from "../src-tauri/catalog.json";
 import type {
   CatalogItem,
+  DownloadResult,
   FirmwareAnalysis,
   FlashResult,
   HistoryEntry,
@@ -19,6 +20,10 @@ const previewCatalog: CatalogItem[] = rawCatalog.releases.map((release) => ({
 export async function getCatalog(): Promise<CatalogItem[]> {
   if (!isDesktop) return previewCatalog;
   return invoke<CatalogItem[]>("get_catalog");
+}
+
+export async function downloadOfficialFirmware(firmwareId: string): Promise<DownloadResult> {
+  return invoke<DownloadResult>("download_official_firmware", { firmwareId });
 }
 
 export async function scanDevices(): Promise<TouchDevice[]> {

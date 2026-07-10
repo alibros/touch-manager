@@ -1,5 +1,6 @@
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { open, save } from "@tauri-apps/plugin-dialog";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import {
   Activity,
   ArrowLeft,
@@ -28,6 +29,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   analyzeFirmware,
+  downloadOfficialFirmware,
   flashFirmware,
   getCatalog,
   getHistory,
@@ -73,6 +75,7 @@ function App() {
   const [filter, setFilter] = useState("all");
   const [installing, setInstalling] = useState<CatalogItem | null>(null);
   const [loading, setLoading] = useState(true);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const refreshDevices = useCallback(async () => {
@@ -173,6 +176,21 @@ function App() {
     }
   }
 
+  async function downloadFirmware(item: CatalogItem) {
+    setDownloadingId(item.id);
+    setError(null);
+    try {
+      await downloadOfficialFirmware(item.id);
+      const refreshed = await getCatalog();
+      setCatalog(refreshed);
+      setSelected(refreshed.find((candidate) => candidate.id === item.id) ?? null);
+    } catch (reason) {
+      setError(String(reason));
+    } finally {
+      setDownloadingId(null);
+    }
+  }
+
   return (
     <div className="app-shell">
       <header className="topbar">
@@ -233,6 +251,8 @@ function App() {
             onFilter={setFilter}
             onSelect={setSelected}
             onInstall={setInstalling}
+            onDownload={downloadFirmware}
+            downloadingId={downloadingId}
             onImport={importFirmware}
           />
         ) : page === "device" ? (
@@ -278,6 +298,32 @@ function NavButton({
   );
 }
 
+function ExternalLink({
+  href,
+  className,
+  children,
+}: {
+  href: string;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <a
+      className={className}
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      onClick={(event) => {
+        if (!isDesktop) return;
+        event.preventDefault();
+        void openUrl(href);
+      }}
+    >
+      {children}
+    </a>
+  );
+}
+
 function DevicePill({
   runtime,
   dfu,
@@ -310,6 +356,8 @@ function LibraryPage({
   onFilter,
   onSelect,
   onInstall,
+  onDownload,
+  downloadingId,
   onImport,
 }: {
   items: CatalogItem[];
@@ -321,6 +369,8 @@ function LibraryPage({
   onFilter: (value: string) => void;
   onSelect: (item: CatalogItem) => void;
   onInstall: (item: CatalogItem) => void;
+  onDownload: (item: CatalogItem) => void;
+  downloadingId: string | null;
   onImport: () => void;
 }) {
   return (
@@ -361,12 +411,25 @@ function LibraryPage({
             />
           ))}
         </div>
+        <ExternalLink
+          className="community-directory"
+          href="https://github.com/Synthux-Academy/awesome-synthux#simple-touch-2"
+        >
+          <span><small>Community directory</small><strong>Explore more Touch 2 instruments</strong></span>
+          <ArrowUpRight />
+        </ExternalLink>
         {items.length === 0 && <div className="empty-state">No instruments match this view.</div>}
       </section>
 
       <aside className="detail-panel">
         {selected ? (
-          <FirmwareDetail item={selected} deviceConnected={deviceConnected} onInstall={() => onInstall(selected)} />
+          <FirmwareDetail
+            item={selected}
+            deviceConnected={deviceConnected}
+            downloading={downloadingId === selected.id}
+            onInstall={() => onInstall(selected)}
+            onDownload={() => onDownload(selected)}
+          />
         ) : (
           <div className="empty-detail"><Menu /> Select an instrument</div>
         )}
@@ -399,13 +462,19 @@ function FirmwareCard({ item, selected, onSelect }: { item: CatalogItem; selecte
 function FirmwareDetail({
   item,
   deviceConnected,
+  downloading,
   onInstall,
+  onDownload,
 }: {
   item: CatalogItem;
   deviceConnected: boolean;
+  downloading: boolean;
   onInstall: () => void;
+  onDownload: () => void;
 }) {
   const size = item.analysis ? `${Math.round(item.analysis.size / 1024)} KB` : "—";
+  const downloadable =
+    item.trust === "official" && item.license === "MIT" && Boolean(item.downloadUrl);
   return (
     <div className="detail-content">
       <div className={`detail-hero tone-${item.tone}`}>
@@ -425,12 +494,26 @@ function FirmwareDetail({
         <div><dt>Checksum</dt><dd className={item.checksumMatches === false ? "bad" : ""}>{item.checksumMatches === false ? "Mismatch" : item.availableLocally ? "Verified" : "Not cached"}</dd></div>
       </dl>
       <div className="detail-actions">
-        <button className="install-action" onClick={onInstall} disabled={!item.availableLocally || item.checksumMatches === false || !isDesktop}>
-          <Download />
-          <span><small>{deviceConnected ? "Ready when you are" : "Connect Touch 2"}</small>Install instrument</span>
-        </button>
-        {!item.availableLocally && <p className="action-note">This catalog entry needs a downloadable package before it can be installed.</p>}
-        {item.sourceUrl && <a href={item.sourceUrl} target="_blank" rel="noreferrer">View source <ArrowUpRight /></a>}
+        {item.availableLocally ? (
+          <button className="install-action" onClick={onInstall} disabled={item.checksumMatches === false || !isDesktop}>
+            <Download />
+            <span><small>{deviceConnected ? "Ready when you are" : "Connect Touch 2"}</small>Install instrument</span>
+          </button>
+        ) : downloadable ? (
+          <button className="install-action download-action" onClick={onDownload} disabled={downloading || !isDesktop}>
+            {downloading ? <LoaderCircle className="spin" /> : <Download />}
+            <span><small>Verified official release</small>{downloading ? "Downloading…" : "Download firmware"}</span>
+          </button>
+        ) : null}
+        {!item.availableLocally && !downloadable && item.trust === "official" && (
+          <p className="action-note">This official binary is not mirrored because its upstream redistribution license is not confirmed.</p>
+        )}
+        {item.trust !== "official" && (
+          <ExternalLink className="community-source" href="https://github.com/Synthux-Academy/awesome-synthux#simple-touch-2">
+            Browse the Touch 2 community directory <ArrowUpRight />
+          </ExternalLink>
+        )}
+        {item.sourceUrl && <ExternalLink href={item.sourceUrl}>View source <ArrowUpRight /></ExternalLink>}
       </div>
     </div>
   );

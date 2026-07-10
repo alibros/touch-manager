@@ -36,6 +36,7 @@ export interface FirmwareRelease {
   targetProfile: TargetProfile;
   sha256: string;
   artifactPath: string;
+  downloadUrl?: string;
   sourceUrl: string;
   license?: string;
   runtimeUsb: boolean;
@@ -47,6 +48,11 @@ export interface CatalogItem extends FirmwareRelease {
   availableLocally: boolean;
   checksumMatches?: boolean;
   analysis?: FirmwareAnalysis;
+}
+
+export interface DownloadResult {
+  path: string;
+  analysis: FirmwareAnalysis;
 }
 
 export interface TouchDevice {

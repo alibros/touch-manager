@@ -1,11 +1,17 @@
 {
   "name": "touch-manager",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A safe firmware library, installer, and diagnostic console for Synthux Touch 2.",
   "license": "MIT",
   "author": "Ali Bross",
-  "keywords": ["synthux", "touch-2", "firmware", "dfu", "tauri"],
+  "keywords": [
+    "synthux",
+    "touch-2",
+    "firmware",
+    "dfu",
+    "tauri"
+  ],
   "engines": {
     "node": ">=20.19"
   },
@@ -21,6 +27,7 @@
   "dependencies": {
     "@tauri-apps/api": "^2.11.1",
     "@tauri-apps/plugin-dialog": "^2.7.1",
+    "@tauri-apps/plugin-opener": "^2.5.4",
     "lucide-react": "^0.468.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"

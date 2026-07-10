@@ -163,6 +163,15 @@ svg { width: 18px; height: 18px; stroke-width: 1.8; }
 .detail-actions > a svg { width: 12px; }
 .action-note { color: var(--muted); font-size: 9px; line-height: 1.5; }
 .empty-state, .empty-detail { min-height: 220px; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 11px; }
+.community-directory { min-height: 74px; margin-top: 22px; border: 1px solid var(--ink); border-radius: 15px; color: var(--ink); background: var(--acid); text-decoration: none; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 15px 18px; }
+.community-directory span { display: grid; gap: 4px; }
+.community-directory small { font-family: "DM Mono", monospace; font-size: 8px; text-transform: uppercase; letter-spacing: .1em; }
+.community-directory strong { font-size: 13px; }
+.community-directory svg { width: 20px; height: 20px; }
+.download-action { background: var(--accent); color: var(--ink); }
+.download-action:hover { background: #ff704f; }
+.download-action svg { color: var(--ink); }
+.detail-actions > a.community-source { display: flex; width: 100%; justify-content: space-between; border: 1px solid var(--line); border-radius: 10px; padding: 10px; margin-top: 0; }
 .empty-detail { height: 100%; flex-direction: column; gap: 10px; }
 
 .single-page { padding: 52px max(42px, calc((100vw - 1180px) / 2)); min-height: calc(100vh - 74px); }

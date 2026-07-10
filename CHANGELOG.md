@@ -5,9 +5,16 @@ All notable changes to Touch Manager will be documented here. The project follow
 
 ## Unreleased
 
+### Added
+
+- On-demand, checksum-verified downloads for licensed official firmware.
+- Content-addressed firmware cache in the application data directory.
+- Curated community-directory and upstream-source links opened in the system browser.
+- Official firmware redistribution notices.
+
 ### Planned
 
-- Signed remote catalog and content-addressed firmware cache.
+- Signed remote catalog updates.
 - Maintained firmware builds with the TouchLink update protocol.
 - Signed and notarized release automation.
 - Windows and Linux hardware packaging.

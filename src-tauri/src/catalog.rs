@@ -1,6 +1,9 @@
 use crate::firmware::{analyze_firmware, FirmwareAnalysis, TargetProfile};
 use serde::{Deserialize, Serialize};
-use std::{env, fs, path::PathBuf};
+use std::{
+    env, fs,
+    path::{Path, PathBuf},
+};
 use thiserror::Error;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -29,6 +32,8 @@ pub struct FirmwareRelease {
     pub target_profile: TargetProfile,
     pub sha256: String,
     pub artifact_path: String,
+    #[serde(default)]
+    pub download_url: Option<String>,
     pub source_url: String,
     pub license: Option<String>,
     pub runtime_usb: bool,
@@ -52,26 +57,48 @@ pub enum CatalogError {
     Json(#[from] serde_json::Error),
 }
 
-pub fn load_catalog() -> Result<Vec<CatalogItem>, CatalogError> {
-    let document: CatalogDocument = serde_json::from_str(include_str!("../catalog.json"))?;
+pub fn catalog_document() -> Result<CatalogDocument, CatalogError> {
+    Ok(serde_json::from_str(include_str!("../catalog.json"))?)
+}
+
+pub fn find_release(id: &str) -> Result<Option<FirmwareRelease>, CatalogError> {
+    Ok(catalog_document()?
+        .releases
+        .into_iter()
+        .find(|release| release.id == id))
+}
+
+pub fn load_catalog(cache_dir: Option<&Path>) -> Result<Vec<CatalogItem>, CatalogError> {
+    let document = catalog_document()?;
     let workspace = discover_workspace_root();
 
     Ok(document
         .releases
         .into_iter()
         .map(|release| {
-            let local_path = workspace
+            let workspace_path = workspace
                 .as_ref()
                 .map(|root| root.join(&release.artifact_path));
-            let analysis = local_path
-                .as_ref()
+            let cache_path = cache_dir.map(|root| root.join(format!("{}.bin", release.sha256)));
+            let candidates = [cache_path, workspace_path];
+            let mut analyzed = candidates
+                .iter()
+                .flatten()
                 .filter(|path| path.is_file())
-                .and_then(|path| analyze_firmware(path).ok());
+                .filter_map(|path| analyze_firmware(path).ok().map(|analysis| (path, analysis)))
+                .collect::<Vec<_>>();
+            let preferred = analyzed
+                .iter()
+                .position(|(_, analysis)| analysis.sha256.eq_ignore_ascii_case(&release.sha256))
+                .unwrap_or(0);
+            let resolved = (!analyzed.is_empty()).then(|| analyzed.swap_remove(preferred));
+            let local_path = resolved.as_ref().map(|(path, _)| (*path).clone());
+            let analysis = resolved.map(|(_, analysis)| analysis);
             let checksum_matches = analysis
                 .as_ref()
                 .map(|item| item.sha256.eq_ignore_ascii_case(&release.sha256));
             CatalogItem {
-                available_locally: local_path.as_ref().is_some_and(|path| path.is_file()),
+                available_locally: local_path.is_some(),
                 local_path: local_path
                     .filter(|path| path.is_file())
                     .map(|path| path.to_string_lossy().to_string()),
@@ -111,12 +138,12 @@ mod tests {
 
     #[test]
     fn bundled_catalog_has_complete_unique_metadata() {
-        let document: CatalogDocument =
-            serde_json::from_str(include_str!("../catalog.json")).expect("catalog should parse");
+        let document = catalog_document().expect("catalog should parse");
         assert_eq!(document.schema_version, 1);
         assert_eq!(document.releases.len(), 23);
 
         let mut ids = HashSet::new();
+        let mut downloadable = 0;
         for release in document.releases {
             assert!(
                 ids.insert(release.id.clone()),
@@ -126,7 +153,16 @@ mod tests {
             assert_eq!(release.sha256.len(), 64, "invalid hash: {}", release.id);
             assert!(!release.name.trim().is_empty());
             assert!(!release.artifact_path.trim().is_empty());
+            if let Some(url) = &release.download_url {
+                downloadable += 1;
+                assert_eq!(release.trust, "official");
+                assert_eq!(release.license.as_deref(), Some("MIT"));
+                assert!(
+                    url.starts_with("https://github.com/alibros/touch-manager/releases/download/")
+                );
+            }
         }
+        assert_eq!(downloadable, 8, "unexpected downloadable release count");
     }
 
     #[test]
@@ -134,7 +170,7 @@ mod tests {
         if discover_workspace_root().is_none() {
             return;
         }
-        let catalog = load_catalog().expect("bundled catalog should parse");
+        let catalog = load_catalog(None).expect("bundled catalog should parse");
         assert_eq!(catalog.len(), 23, "catalog must cover every staged binary");
 
         for item in catalog {

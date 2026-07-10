@@ -1,6 +1,7 @@
 mod catalog;
 mod device;
 mod diagnostics;
+mod download;
 mod firmware;
 mod flash;
 mod history;
@@ -12,8 +13,21 @@ use std::{fs, path::PathBuf};
 use tauri::{Manager, State};
 
 #[tauri::command]
-fn get_catalog() -> Result<Vec<catalog::CatalogItem>, String> {
-    catalog::load_catalog().map_err(|error| error.to_string())
+fn get_catalog(app: tauri::AppHandle) -> Result<Vec<catalog::CatalogItem>, String> {
+    let cache_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|error| error.to_string())?
+        .join("firmware-cache");
+    catalog::load_catalog(Some(&cache_dir)).map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+async fn download_official_firmware(
+    app: tauri::AppHandle,
+    firmware_id: String,
+) -> Result<download::DownloadResult, String> {
+    download::download_official(&app, &firmware_id).await
 }
 
 #[tauri::command]
@@ -68,6 +82,7 @@ async fn flash_firmware(
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             let data_dir = app.path().app_data_dir()?;
             fs::create_dir_all(&data_dir)?;
@@ -79,6 +94,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             get_catalog,
+            download_official_firmware,
             analyze_firmware_file,
             scan_touch_devices,
             list_history,
