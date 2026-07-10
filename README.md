@@ -12,9 +12,10 @@ BOOT/RESET recovery path.
 > connected during an installation and retain a known-good firmware binary. Automated
 > tests never write to a connected device.
 
-## What works in 0.1
+## What works in 0.2
 
 - Bundled metadata for 23 official and community Touch 2 instruments.
+- On-demand downloading and verified local caching for redistributable official firmware.
 - Searchable firmware library with trust, provenance, target, and checksum information.
 - Raw `.bin` import and local Cortex-M vector-table analysis.
 - SHA-256, size, Thumb-vector, stack-pointer, and execution-layout validation.
@@ -38,9 +39,14 @@ Apple-notarized, so first launch may require Control-clicking the app, choosing 
 or approving it in **System Settings → Privacy & Security**. Install `dfu-util` with
 `brew install dfu-util` before writing firmware.
 
-Release builds contain the firmware catalog but do not redistribute upstream firmware
-binaries. Users can import a `.bin` directly or provide the Synthux firmware workspace
-described below.
+Release builds can download the eight official firmware binaries whose upstream MIT
+licenses permit redistribution. Every download is checked against its catalog SHA-256 and
+target profile before it enters the local cache. TouchBass 1.0.2 remains source-only until
+its upstream repository includes a redistribution license.
+
+Community entries link to their upstream source and the
+[community-maintained Simple Touch 2 directory](https://github.com/Synthux-Academy/awesome-synthux#simple-touch-2),
+rather than mirroring binaries with unspecified licenses.
 
 ## Safety model
 
@@ -75,11 +81,11 @@ Frontend-only preview:
 npm run dev
 ```
 
-## Firmware workspace
+## Optional firmware workspace
 
-Firmware binaries are intentionally not copied into this repository. The bundled catalog
-contains metadata, approved target profiles, paths, and SHA-256 values. At runtime the app
-resolves artifacts from a Synthux workspace containing `Firmware/SHA256SUMS.txt`.
+Developers can additionally resolve staged binaries from a Synthux workspace containing
+`Firmware/SHA256SUMS.txt`. Normal users do not need this workspace to download the eight
+licensed official releases or import their own `.bin` file.
 
 Resolution order:
 

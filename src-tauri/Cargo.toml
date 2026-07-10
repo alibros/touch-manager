@@ -1,6 +1,6 @@
 [package]
 name = "touch-manager"
-version = "0.1.0"
+version = "0.2.0"
 description = "Firmware library and diagnostic manager for Synthux Touch 2"
 authors = ["Ali Bross"]
 edition = "2021"
@@ -20,6 +20,7 @@ chrono = { version = "0.4.42", features = ["serde"] }
 hex = "0.4.3"
 nusb = "0.2.4"
 parking_lot = "0.12.5"
+reqwest = { version = "0.13.4", default-features = false, features = ["native-tls", "system-proxy"] }
 rusqlite = { version = "=0.39.0", features = ["bundled"] }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
@@ -27,5 +28,6 @@ serialport = { version = "4.9.0", default-features = false }
 sha2 = "0.11.0"
 tauri = { version = "2.11.5", features = [] }
 tauri-plugin-dialog = "2.7.1"
+tauri-plugin-opener = "2.5.4"
 thiserror = "2.0.18"
 uuid = { version = "1.20.0", features = ["v4", "serde"] }
