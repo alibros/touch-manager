@@ -20,7 +20,7 @@ chrono = { version = "0.4.42", features = ["serde"] }
 hex = "0.4.3"
 nusb = "0.2.4"
 parking_lot = "0.12.5"
-rusqlite = { version = "=0.39.0", features = ["bundled"] }
+rusqlite = { version = "=0.40.1", features = ["bundled"] }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
 serialport = { version = "4.9.0", default-features = false }
